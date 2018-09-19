@@ -2,6 +2,8 @@
  Name:		ICSEDSTest.ino
  Created:	2/26/2017 1:35:24 PM
  Author:	robert
+
+ modified on 19 September 2018 by Medad Newman
 */
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h>
@@ -18,8 +20,8 @@
 
 #define LEDPIN 13
 #define RADIOPIN 9
-//#define GPSTXPIN 4
-//#define GPSRXPIN 3
+#define GPSTXPIN 4
+#define GPSRXPIN 3
 #define GPSENABLE 2
 char datastring[140];
 char floatBuffer[10];
@@ -41,8 +43,8 @@ Adafruit_LSM303_Mag_Unified   mag   = Adafruit_LSM303_Mag_Unified(30302);
 /* Update this with the correct SLP for accurate altitude measurements */
 float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
 
-//SoftwareSerial GPSSERIAL(GPSTXPIN, GPSRXPIN);
-#define GPSSERIAL Serial1
+SoftwareSerial GPSSERIAL(GPSTXPIN, GPSRXPIN);
+//#define GPSSERIAL GPSSERIAL
 TinyGPSPlus gps;
 // the setup function runs once when you press reset or power the board
 /*struct PosData {
@@ -61,7 +63,7 @@ void setup() {
   while (!Serial) {
 
   }
-  //Serial1.begin(9600);
+  //GPSSERIAL.begin(9600);
   //GPS Initalization Initalize software serial and tie to serial
   //telemetry = { 0f,0f,0f };
 
@@ -75,24 +77,24 @@ void setup() {
 void loop() {
   //delay(5000);
   
-  Serial1.begin(9600);
+  GPSSERIAL.begin(9600);
   for(int k = 0; k < 200; k++){
     delay(10);
-    while (Serial1.available())
+    while (GPSSERIAL.available())
     {
-      //Serial.write(Serial1.read());
+      //Serial.write(GPSSERIAL.read());
       //delay(100);
       //send the serial data to buffer
       //clean up data (?)
       //serial end?
       //gps.encode(buffer)
-      gps.encode(Serial1.read());
+      gps.encode(GPSSERIAL.read());
     }
   }
-  Serial1.end();
+  GPSSERIAL.end();
   
   //Serial.println(gps.location.lat(), 6);
-  //int data = Serial1.read();
+  //int data = GPSSERIAL.read();
   //Serial.println("data: " + data);
   //if () {
     posAlt = gps.altitude.meters();
