@@ -2,8 +2,12 @@
  Name:		ICSEDSTest.ino
  Created:	2/26/2017 1:35:24 PM
  Author:	robert
-
+ 
+ Modified in early 2018 by Ignaty
  modified on 19 September 2018 by Medad Newman
+
+ ref for radio/rtty: https://ukhas.org.uk/guides:linkingarduinotontx2
+ IT is ABSOLUTELY critical to configure the GPS to work above 12 km this way: https://ava.upuaut.net/?p=738
 */
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h>
@@ -11,194 +15,101 @@
 
 #include <SD.h>
 #include <SPI.h>
-
 #include <Wire.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_LSM303_U.h>
-#include <Adafruit_L3GD20_U.h>
-#include <Adafruit_9DOF.h>
+
 
 #define LEDPIN 13
-#define RADIOPIN 9
-#define GPSTXPIN 4
-#define GPSRXPIN 3
-#define GPSENABLE 2
+#define RADIOPIN 4
+#define GPSRXPIN 2
+#define GPSTXPIN 3
 char datastring[140];
 char floatBuffer[10];
 String csvString;
 String timeActual;
 
+/*
+ * ALL the initialisation stuff
+*/
 int CS_PIN = 10;
-
 String callsign = "NEMO";
-
 File file;
-
-/* Assign a unique ID to the sensors */
-Adafruit_9DOF                dof   = Adafruit_9DOF();
-Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(30301);
-Adafruit_LSM303_Mag_Unified   mag   = Adafruit_LSM303_Mag_Unified(30302);
 
 
 /* Update this with the correct SLP for accurate altitude measurements */
-float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
-
-SoftwareSerial GPSSERIAL(GPSTXPIN, GPSRXPIN);
-//#define GPSSERIAL GPSSERIAL
-TinyGPSPlus gps;
-// the setup function runs once when you press reset or power the board
-/*struct PosData {
-	float lat, longd, alt;
-};
-struct PosData telemetry;
-*/
+SoftwareSerial GPSSERIAL(GPSRXPIN, GPSTXPIN); // set up the serial connection with the GPS rx,tx
+TinyGPSPlus gps; // create the GPS parser object
 double posLat, posLongd, posAlt;
+
+// the setup function runs once when you press reset or power the board
 void setup() {
+  // Pin related stuff
   pinMode(RADIOPIN, OUTPUT);
   pinMode(LEDPIN, OUTPUT);
-  pinMode(GPSENABLE, OUTPUT);
-  digitalWrite(GPSENABLE, HIGH);
 
+  // Serial for GPS and for the computer connection
   Serial.begin(38400);
-  while (!Serial) {
+  GPSSERIAL.begin(9600);
 
-  }
-  //GPSSERIAL.begin(9600);
-  //GPS Initalization Initalize software serial and tie to serial
-  //telemetry = { 0f,0f,0f };
-
+  // SD card related setups
   initializeSD();
-  createFile("telem.txt");
+  createFile("telem.txt"); // Put a file unique for time
   closeFile();
 
-  initSensors();
 }
+
+
 // the loop function runs over and over again until power down or reset
 void loop() {
-  //delay(5000);
   
+  // The microcontroller listens to the gps for 2 seconds to receive a gps signal. This may be very dangerous because signals may arrive only after 2 seconds. Make it interrupt driven
   GPSSERIAL.begin(9600);
-  for(int k = 0; k < 200; k++){
+  for(int k = 0; k < 200; k++){ // why do this?? medad
     delay(10);
     while (GPSSERIAL.available())
     {
-      //Serial.write(GPSSERIAL.read());
-      //delay(100);
-      //send the serial data to buffer
-      //clean up data (?)
-      //serial end?
-      //gps.encode(buffer)
+      //Serial.write(GPSSERIAL.read()); // for debugging only
       gps.encode(GPSSERIAL.read());
     }
   }
-  GPSSERIAL.end();
-  
-  //Serial.println(gps.location.lat(), 6);
-  //int data = GPSSERIAL.read();
-  //Serial.println("data: " + data);
-  //if () {
-    posAlt = gps.altitude.meters();
-    //Serial.println(gps.location.lat(), 6);
-    posLat = gps.location.lat();
-    posLongd = gps.location.lng();
+  GPSSERIAL.end();// not too sure if we need to end the serial connection
 
-    timeActual = String(gps.time.hour()) + ':' + String(gps.time.minute()) + ':' + String(gps.time.second());
-  //}
+  // Now process the gps data and parse all the information we need
+  posAlt = gps.altitude.meters();
+  posLat = gps.location.lat();
+  posLongd = gps.location.lng();
+  timeActual = String(gps.time.hour()) + ':' + String(gps.time.minute()) + ':' + String(gps.time.second());
   
-  //sprintf(datastring, "Alt=%f ,Lat=%f , Long = %f", telemetry.alt,telemetry.lat,telemetry.longd);
-  //snprintf(datastring, 80, "%.6f,%.6f,%.6f", posLat,posLongd,posAlt);
-  //Serial.println(datastring); //return;
-  //sprintf(datastring, 80, "P=%ld, T=%ld");//, (long)pressure, (long)temperature);
-
-  csvString = "$$" + callsign + ',' + String(millis());
-  csvString = csvString + ',' + timeActual;
+  // now make the telemetry string 
+  // TODO: put in a counter and date and time
+  csvString = "$$" + callsign + ',' + String(millis());// may not be a good idea to put the millis here
+  csvString += ',' + timeActual;
   csvString += ',' + String(posLat, 6);
   csvString += ',' + String(posLongd,6);
   csvString += ',' + String(posAlt,6);
-  csvString.toCharArray(datastring,140);
+  csvString.toCharArray(datastring,140); //why 140?
+
+  // Standard code from the RTTY reference
   unsigned int CHECKSUM = gps_CRC16_checksum(datastring);  // Calculates the checksum for this datastring
   char checksum_str[6];
   sprintf(checksum_str, "*%04X\n", CHECKSUM);
   strcat(datastring, checksum_str);
-  //Serial.println(gps.altitude.meters());
-  //Serial.println(gps.location.lat());
-  //Serial.println(gps.location.lng());
-  Serial.println("Transmitting Data:");
-  Serial.println(datastring);
+  Serial.write(datastring);
   rtty_txstring(datastring);
 
-  //Serial.println(csvString);
-  
-  sensors_event_t accel_event;
-  sensors_event_t mag_event;
-  sensors_vec_t   orientation;
-  
-  //TODO: add timer so this stupid library doesn't interrupt execution if the sensorgets disconnected
-  //Srsly who the HELL CODED THIS LIBRARY?!
-  /* Calculate pitch and roll from the raw accelerometer data */
-  if(accel.begin()){
-  accel.getEvent(&accel_event);
-  if (dof.accelGetOrientation(&accel_event, &orientation))
-  {
-    /* 'orientation' should have valid .roll and .pitch fields */
-    csvString = csvString + ',' + orientation.roll;
-    csvString = csvString + ',' + orientation.pitch;
-  }
-  }
 
-  /* Calculate the heading using the magnetometer */
-  if(mag.begin()){
-  mag.getEvent(&mag_event);
-  if (dof.magGetOrientation(SENSOR_AXIS_Z, &mag_event, &orientation))
-  {
-  }
-
-  if (dof.magTiltCompensation(SENSOR_AXIS_Z, &mag_event, &accel_event))
-  {
-    csvString = csvString + ',' + String(orientation.heading);
-  }
-  else
-  {
-    // Oops ... something went wrong (probably bad data)
-  }
-  }
+  // Now logging the accleration,gyro and magnetic data to CSV
   openFile("telem.txt");
-  char* fileString;
-  //csvString.toCharArray(fileString,);
   writeToFile(csvString);
   closeFile();
-  //Serial.println(fileString);
-  //Serial.println(csvString);
-  Serial.println();
+  
 
-  if(posAlt < 500 && gps.time.hour() >= 19){
-    digitalWrite(LEDPIN, HIGH);
-  } else {
-    digitalWrite(LEDPIN, LOW);
-  }
+  Serial.println();
+  // delay at the end of the loop. May not be needed
   delay(2000);
 }
 
-void storeTelemetry() {
 
-}
-
-void initSensors()
-{
-  if (!accel.begin())
-  {
-    /* There was a problem detecting the LSM303 ... check your connections */
-    Serial.println(F("Ooops, no LSM303 detected ... Check your wiring!"));
-    //while(1);
-  }
-  if (!mag.begin())
-  {
-    /* There was a problem detecting the LSM303 ... check your connections */
-    Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
-    //while(1);
-  }
-}
-
+// Below are all the SD card related code
 void initializeSD()
 {
   Serial.println("Initializing SD card...");
@@ -267,6 +178,8 @@ int openFile(char filename[])
   }
 }
 
+
+// All the functions below are RTTY related. 
 void rtty_txstring(char * string)
 {
 
