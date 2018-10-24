@@ -116,10 +116,13 @@ void loop() {
   //csvString += ',' + String(pressure,6);
 
   //Serial.println(csvString); 
-  Serial.println(F("kjsf"));
-  Serial.println(freeMemory());
+    Serial.println(freeMemory());
 
-  csvString.toCharArray(datastring,100); //why 140?
+  Serial.println(F("kjsf"));
+      Serial.println(freeMemory());
+
+
+  //csvString.toCharArray(datastring,100); //why 140?
   
   // Standard code from the RTTY reference
   unsigned int CHECKSUM = gps_CRC16_checksum(datastring);  // Calculates the checksum for this datastring
@@ -303,7 +306,6 @@ void rtty_txbit(int bit)
   {
     // low
     digitalWrite(RADIOPIN, LOW);
-
   }
 
   //                  delayMicroseconds(3370); // 300 baud
