@@ -8,37 +8,61 @@
 
  ref for radio/rtty: https://ukhas.org.uk/guides:linkingarduinotontx2
  IT is ABSOLUTELY critical to configure the GPS to work above 12 km this way: https://ava.upuaut.net/?p=738
+ //TODO: get the analogue read for the sensors
+ //TODO: get the library for reading the pressure sensor
+ Senors to sample: 
+ int temp
+ ext temp
+ pressure
+ long
+ lat 
+ alt
+ 
 */
+// In-built libraries
 #include <SoftwareSerial.h>
-#include <TinyGPS++.h>
-#include <util/crc16.h>
-
 #include <SD.h>
 #include <SPI.h>
 #include <Wire.h>
 
+// External libraries
+#include <TinyGPS++.h>
+#include <util/crc16.h>
+#include <MS5611.h>
 
+// Defining all the hard coded values
 #define LEDPIN 13
-#define RADIOPIN 4
+#define RADIOPIN 8
 #define GPSRXPIN 2
 #define GPSTXPIN 3
-char datastring[140];
-char floatBuffer[10];
+#define CS_PIN 10
+#define Ext_tmp_pin1 0
+#define Ext_tmp_pin2 1
+#define callsign "ICSEDS"
+
+
+MS5611 sensor(&Wire);
+
+
+char datastring[100];
+char checksum_str[6];
+
 String csvString;
-String timeActual;
+String timeActual = "NONE";
+double int_temp = 0;
+double ext_temp = 0;
+double pressure = 0;
+double posLat, posLongd, posAlt;
+
+// Initialise the telemetry count
+int telem_counter = 3;
 
 /*
  * ALL the initialisation stuff
 */
-int CS_PIN = 10;
-String callsign = "NEMO";
 File file;
-
-
-/* Update this with the correct SLP for accurate altitude measurements */
 SoftwareSerial GPSSERIAL(GPSRXPIN, GPSTXPIN); // set up the serial connection with the GPS rx,tx
 TinyGPSPlus gps; // create the GPS parser object
-double posLat, posLongd, posAlt;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -51,76 +75,115 @@ void setup() {
   GPSSERIAL.begin(9600);
 
   // SD card related setups
-  initializeSD();
-  createFile("telem.txt"); // Put a file unique for time
-  closeFile();
+  //initializeSD();
+
+  //createFile("telemetry.txt"); // Put a file unique for time
+
+  //closeFile();
 
 }
 
 
 // the loop function runs over and over again until power down or reset
 void loop() {
-  
-  // The microcontroller listens to the gps for 2 seconds to receive a gps signal. This may be very dangerous because signals may arrive only after 2 seconds. Make it interrupt driven
-  GPSSERIAL.begin(9600);
-  for(int k = 0; k < 200; k++){ // why do this?? medad
-    delay(10);
-    while (GPSSERIAL.available())
-    {
-      //Serial.write(GPSSERIAL.read()); // for debugging only
-      gps.encode(GPSSERIAL.read());
-    }
+
+  while (GPSSERIAL.available())
+  {
+    Serial.write(GPSSERIAL.read()); // for debugging only
+    gps.encode(GPSSERIAL.read());
   }
-  GPSSERIAL.end();// not too sure if we need to end the serial connection
+  //read_lm35(); 
+  //read_ms5611();
+  
 
   // Now process the gps data and parse all the information we need
   posAlt = gps.altitude.meters();
   posLat = gps.location.lat();
   posLongd = gps.location.lng();
-  timeActual = String(gps.time.hour()) + ':' + String(gps.time.minute()) + ':' + String(gps.time.second());
+  timeActual = gps.time.value();
   
   // now make the telemetry string 
   // TODO: put in a counter and date and time
-  csvString = "$$" + callsign + ',' + String(millis());// may not be a good idea to put the millis here
-  csvString += ',' + timeActual;
-  csvString += ',' + String(posLat, 6);
-  csvString += ',' + String(posLongd,6);
-  csvString += ',' + String(posAlt,6);
-  csvString.toCharArray(datastring,140); //why 140?
+  //csvString = "$$" callsign;
+  //csvString += ',' + String(timeActual);
 
+  //csvString += ',' + String(telem_counter);
+  //csvString += ',' + String(posLat, 6);
+  //csvString += ',' + String(posLongd,6);
+  //csvString += ',' + String(posAlt,6);
+  //csvString += ',' + String(int_temp,6);
+  //csvString += ',' + String(ext_temp,6);
+  //csvString += ',' + String(pressure,6);
+
+  //Serial.println(csvString); 
+  Serial.println(F("kjsf"));
+  Serial.println(freeMemory());
+
+  csvString.toCharArray(datastring,100); //why 140?
+  
   // Standard code from the RTTY reference
   unsigned int CHECKSUM = gps_CRC16_checksum(datastring);  // Calculates the checksum for this datastring
-  char checksum_str[6];
   sprintf(checksum_str, "*%04X\n", CHECKSUM);
   strcat(datastring, checksum_str);
   Serial.write(datastring);
   rtty_txstring(datastring);
 
-
-  // Now logging the accleration,gyro and magnetic data to CSV
-  openFile("telem.txt");
+  // now log the whole string into a file in the sd card
+  openFile("telemetry.txt");
   writeToFile(csvString);
   closeFile();
-  
 
-  Serial.println();
-  // delay at the end of the loop. May not be needed
-  delay(2000);
+  // increase the telem by 1
+  telem_counter +=1;
 }
 
+// read lm35
+void read_lm35(){
+  ext_temp = (analogRead(Ext_tmp_pin1)-analogRead(Ext_tmp_pin2))* (5.0*0.01 / 1023.0);
+  }
+
+// read ms5611
+void read_ms5611(){
+  if (sensor.connect()>0) {
+  //Serial.println(F("Error connecting..."));
+  }
+  sensor.ReadProm();
+  sensor.Readout();
+  int_temp = sensor.GetTemp();
+  pressure = sensor.GetPres();
+}
+
+
+#ifdef __arm__
+// should use uinstd.h to define sbrk but Due causes a conflict
+extern "C" char* sbrk(int incr);
+#else  // __ARM__
+extern char *__brkval;
+#endif  // __arm__
+ 
+int freeMemory() {
+  char top;
+#ifdef __arm__
+  return &top - reinterpret_cast<char*>(sbrk(0));
+#elif defined(CORE_TEENSY) || (ARDUINO > 103 && ARDUINO != 151)
+  return &top - __brkval;
+#else  // __arm__
+  return __brkval ? &top - __brkval : &top - __malloc_heap_start;
+#endif  // __arm__
+}
 
 // Below are all the SD card related code
 void initializeSD()
 {
-  Serial.println("Initializing SD card...");
+  //Serial.println(F("Initializing SD card..."));
   pinMode(CS_PIN, OUTPUT);
 
   if (SD.begin())
   {
-    Serial.println("SD card is ready to use.");
+    //Serial.println(F("SD card is ready to use."));
   } else
   {
-    Serial.println("SD card initialization failed");
+    //Serial.println(F("SD card initialization failed"));
     return;
   }
 }
@@ -131,11 +194,11 @@ int createFile(char filename[])
 
   if (file)
   {
-    Serial.println("File created successfully.");
+    //Serial.println(F("File created successfully."));
     return 1;
   } else
   {
-    Serial.println("Error while creating file.");
+    //Serial.println(F("Error while creating file."));
     return 0;
   }
 }
@@ -145,12 +208,12 @@ int writeToFile(String text)
   if (file)
   {
     file.println(text);
-    Serial.println("Writing to file: ");
-    Serial.println(text);
+    //Serial.println(F("Writing to file: "));
+    //Serial.println(text);
     return 1;
   } else
   {
-    Serial.println("Couldn't write to file");
+    //Serial.println(F("Couldn't write to file"));
     return 0;
   }
 }
@@ -160,7 +223,7 @@ void closeFile()
   if (file)
   {
     file.close();
-    Serial.println("File closed");
+    //Serial.println(F("File closed"));
   }
 }
 
@@ -169,11 +232,11 @@ int openFile(char filename[])
   file = SD.open(filename);
   if (file)
   {
-    Serial.println("File opened with success!");
+    //Serial.println(F("File opened with success!"));
     return 1;
   } else
   {
-    Serial.println("Error opening file...");
+    //Serial.println(F("Error opening file..."));
     return 0;
   }
 }

@@ -26,11 +26,10 @@ void loop() {
   }*/
   while(gpsSerial.available()){
     data = gpsSerial.read();
-    Serial.print(data);
     gps.encode(data);
   }
-  //Serial.print("LAT=");  Serial.println(gps.location.lat(), 6);
-  //Serial.print("LONG="); Serial.println(gps.location.lng(), 6);
-  //Serial.print("ALT=");  Serial.println(gps.altitude.meters());
+  Serial.print("LAT=");  Serial.println(gps.location.lat(), 6);
+  Serial.print("LONG="); Serial.println(gps.location.lng(), 6);
+  Serial.print("ALT=");  Serial.println(gps.altitude.meters());
   delay(500);
 }

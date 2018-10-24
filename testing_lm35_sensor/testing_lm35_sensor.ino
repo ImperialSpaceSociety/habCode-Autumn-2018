@@ -6,8 +6,8 @@
  */
 
 float vd = 0.6;
-int analogPin1 = 1;     //  connected to analog pin 3
-int analogPin2 = 2;     //  connected to analog pin 3
+int analogPin1 = 0;     //  connected to analog pin 3
+int analogPin2 = 1;     //  connected to analog pin 3
                        // outside leads to ground and +5V
 int val1 = 0;           // variable to store the value read
 int val2 = 0;           // variable to store the value read
