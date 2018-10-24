@@ -53,6 +53,7 @@ double int_temp = 0;
 double ext_temp = 0;
 double pressure = 0;
 double posLat, posLongd, posAlt;
+unsigned int CHECKSUM;
 
 // Initialise the telemetry count
 int telem_counter = 3;
@@ -92,8 +93,8 @@ void loop() {
     Serial.write(GPSSERIAL.read()); // for debugging only
     gps.encode(GPSSERIAL.read());
   }
-  //read_lm35(); 
-  //read_ms5611();
+  read_lm35(); 
+  read_ms5611();
   
 
   // Now process the gps data and parse all the information we need
@@ -104,16 +105,16 @@ void loop() {
   
   // now make the telemetry string 
   // TODO: put in a counter and date and time
-  //csvString = "$$" callsign;
-  //csvString += ',' + String(timeActual);
+  csvString = "$$" callsign;
+  csvString += ',' + String(timeActual);
 
-  //csvString += ',' + String(telem_counter);
-  //csvString += ',' + String(posLat, 6);
-  //csvString += ',' + String(posLongd,6);
-  //csvString += ',' + String(posAlt,6);
-  //csvString += ',' + String(int_temp,6);
-  //csvString += ',' + String(ext_temp,6);
-  //csvString += ',' + String(pressure,6);
+  csvString += ',' + String(telem_counter);
+  csvString += ',' + String(posLat, 6);
+  csvString += ',' + String(posLongd,6);
+  csvString += ',' + String(posAlt,6);
+  csvString += ',' + String(int_temp,6);
+  csvString += ',' + String(ext_temp,6);
+  csvString += ',' + String(pressure,6);
 
   //Serial.println(csvString); 
     Serial.println(freeMemory());
@@ -125,7 +126,7 @@ void loop() {
   //csvString.toCharArray(datastring,100); //why 140?
   
   // Standard code from the RTTY reference
-  unsigned int CHECKSUM = gps_CRC16_checksum(datastring);  // Calculates the checksum for this datastring
+  CHECKSUM = gps_CRC16_checksum(datastring);  // Calculates the checksum for this datastring
   sprintf(checksum_str, "*%04X\n", CHECKSUM);
   strcat(datastring, checksum_str);
   Serial.write(datastring);
@@ -148,7 +149,7 @@ void read_lm35(){
 // read ms5611
 void read_ms5611(){
   if (sensor.connect()>0) {
-  //Serial.println(F("Error connecting..."));
+  Serial.println(F("Error connecting..."));
   }
   sensor.ReadProm();
   sensor.Readout();
@@ -183,10 +184,10 @@ void initializeSD()
 
   if (SD.begin())
   {
-    //Serial.println(F("SD card is ready to use."));
+    Serial.println(F("SD card is ready to use."));
   } else
   {
-    //Serial.println(F("SD card initialization failed"));
+    Serial.println(F("SD card initialization failed"));
     return;
   }
 }
@@ -197,11 +198,11 @@ int createFile(char filename[])
 
   if (file)
   {
-    //Serial.println(F("File created successfully."));
+    Serial.println(F("File created successfully."));
     return 1;
   } else
   {
-    //Serial.println(F("Error while creating file."));
+    Serial.println(F("Error while creating file."));
     return 0;
   }
 }
@@ -211,12 +212,12 @@ int writeToFile(String text)
   if (file)
   {
     file.println(text);
-    //Serial.println(F("Writing to file: "));
-    //Serial.println(text);
+    Serial.println(F("Writing to file: "));
+    Serial.println(text);
     return 1;
   } else
   {
-    //Serial.println(F("Couldn't write to file"));
+    Serial.println(F("Couldn't write to file"));
     return 0;
   }
 }
@@ -226,7 +227,7 @@ void closeFile()
   if (file)
   {
     file.close();
-    //Serial.println(F("File closed"));
+    Serial.println(F("File closed"));
   }
 }
 
@@ -235,11 +236,11 @@ int openFile(char filename[])
   file = SD.open(filename);
   if (file)
   {
-    //Serial.println(F("File opened with success!"));
+    Serial.println(F("File opened with success!"));
     return 1;
   } else
   {
-    //Serial.println(F("Error opening file..."));
+    Serial.println(F("Error opening file..."));
     return 0;
   }
 }
