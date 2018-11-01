@@ -1,14 +1,12 @@
 // Created by Medad Newman on 26 October 2018
 
 int ledPin = 13;      // LED connected to digital pin 9
-int shutterPin = 4;      // LED connected to digital pin 9
-
-int val = 0;         // variable to store the read value
+int shutterPin = 2;      // LED connected to digital pin 9
 
 
-unsigned long seconds = 1000L; // !!! SEE THE CAPITAL "L" USED!!!
-unsigned long minutes = seconds * 60;
-unsigned long hours = minutes * 60; 
+
+
+
 
 
 void setup()
@@ -19,35 +17,38 @@ void setup()
   Serial.begin(9600);
 
   // Blink the LED rapidly to show it is starting up. Make sure the camera is not recording when it is blinking
-  Serial.write("hefdgfdgre1");
+  Serial.println("hefdgfdgre1");
 
-  for (int counter=1; counter<20; counter = counter+1){
+  for (int counter=1; counter<10; counter = counter+1){
     digitalWrite(ledPin, HIGH);
-    delay(100);
+    delay(300);
     digitalWrite(ledPin, LOW);
-    delay(100);
+    delay(50);
   }
   delay(500);
-    Serial.write("hereasdsadsfd1");
+  Serial.println("hereasdsadsfd1");
   
 }
 
 void loop()
 {
-  Serial.write("here1");
+  Serial.println("here1");
   digitalWrite(shutterPin,HIGH);  // Start the video
   delay(500);
+  
 
-  Serial.write("here2");
+  Serial.println("here2");
   digitalWrite(shutterPin,LOW);  //NOW wait a long time(5 minutes)
-  delay(1000*60*3);
+  delay(300000);             //300 seconds              
 
-  Serial.write("here3");
+
+
+  Serial.println("here3");
   digitalWrite(shutterPin,HIGH);  // Now stop the video
   delay(500);
 
-  Serial.write("here4");
+  Serial.println("here4");
   digitalWrite(shutterPin,LOW);  // Wait for the video to save
-  delay(5000);
+  delay(20000); // wiat for 20 seconds for the data to save
   
 }
