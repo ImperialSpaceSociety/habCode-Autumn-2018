@@ -34,7 +34,6 @@ char datastring[140];
 char checksum_str[6];
 
 String csvString;
-String timeActual = "00000000";
 float int_temp = 0;
 float ext_temp = 0;
 double pressure = 0;
@@ -44,7 +43,7 @@ float posLat, posLongd, posAlt;
 unsigned int CHECKSUM;
 
 // SD card related
-char filename[] = "30Oct2018.txt";
+//char filename[] = "30Oct2018.txt";
 
 // related to gps airbourne mode
 // used for putting the GPS in flight mode
@@ -54,9 +53,7 @@ uint8_t ackByteID = 0;
 uint8_t ackPacket[10];
 
 //store the timestamp
-char sz[100];
-
-
+char gps_string[100];
 
 // Initialise the telemetry count
 int telem_counter = 1;
@@ -134,16 +131,15 @@ void loop() {
   posAlt = gps.altitude.meters();
   posLat = gps.location.lat();
   posLongd = gps.location.lng();
-  timeActual = gps.time.value();
   
-  sprintf(sz, "%02d:%02d:%02d", gps.time.hour(), gps.time.minute(), gps.time.second());
-  //Serial.print(sz);
+  sprintf(gps_string, "%02d:%02d:%02d", gps.time.hour(), gps.time.minute(), gps.time.second());
+  //Serial.print(gps_string);
   
   // now make the telemetry string 
   // TODO: put in a counter and date and time
-  csvString = "$$" callsign;
+  csvString = "$$$$" callsign;
   csvString += ',' + String(telem_counter);
-  csvString += ','+String(sz);
+  csvString += ','+String(gps_string);
   
   /*
   csvString += ',' + String(gps.time.hour()); // pad the zero before launch  
@@ -152,9 +148,12 @@ void loop() {
   csvString += ':' + String(gps.time.second());
   */
 
-  csvString += ',' + String(posLat, 6);
-  csvString += ',' + String(posLongd,6);
-  csvString += ',' + String(posAlt,1);
+  // gps related telemetry
+  csvString += ',' + String(posLat, 6); //lat
+  csvString += ',' + String(posLongd,6); //long
+  csvString += ',' + String(posAlt,1); //alt
+  csvString += ',' + String(gps.speed.kmph()/3.6,1); //speed
+
   
   csvString += ',' + String(int_temp,1); // one decimal places
   csvString += ',' + String(ext_temp,1); // one decimal places
