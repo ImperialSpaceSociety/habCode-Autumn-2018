@@ -137,7 +137,7 @@ void loop() {
   
   // now make the telemetry string 
   // TODO: put in a counter and date and time
-  csvString = "$$$$" callsign;
+  csvString = "$$" callsign;
   csvString += ',' + String(telem_counter);
   csvString += ','+String(gps_string);
   
